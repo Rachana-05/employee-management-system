@@ -1,0 +1,103 @@
+
+{
+  "info": {
+    "name": "Employee Management System API",
+    "description": "API requests for employee CRUD, search, filtering and pagination.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "employeeId",
+      "value": "3"
+    }
+  ],
+  "item": [
+    {
+      "name": "List Employees",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/employees"
+      }
+    },
+    {
+      "name": "Get Employee by ID",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/employees/{{employeeId}}"
+      }
+    },
+    {
+      "name": "Create Employee",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Ananya\",\n  \"lastName\": \"Rao\",\n  \"email\": \"ananya.rao@example.com\",\n  \"phoneNumber\": \"+91 9876543211\",\n  \"department\": \"Engineering\",\n  \"designation\": \"Software Engineer\",\n  \"joiningDate\": \"2026-10-15\",\n  \"salary\": 45000,\n  \"status\": \"ACTIVE\"\n}"
+        },
+        "url": "{{baseUrl}}/api/employees"
+      }
+    },
+    {
+      "name": "Update Employee",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Ananya\",\n  \"lastName\": \"Rao\",\n  \"email\": \"ananya.rao@example.com\",\n  \"phoneNumber\": \"+91 9876543211\",\n  \"department\": \"Engineering\",\n  \"designation\": \"Senior Software Engineer\",\n  \"joiningDate\": \"2026-10-15\",\n  \"salary\": 50000,\n  \"status\": \"ACTIVE\"\n}"
+        },
+        "url": "{{baseUrl}}/api/employees/{{employeeId}}"
+      }
+    },
+    {
+      "name": "Search Employees",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/employees/search?keyword=Ananya"
+      }
+    },
+    {
+      "name": "Filter by Status",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/employees/filter/status?status=ACTIVE"
+      }
+    },
+    {
+      "name": "Filter by Department",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/employees/filter/department?department=Engineering"
+      }
+    },
+    {
+      "name": "Paginated Employees",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/employees/page?page=0&size=5"
+      }
+    },
+    {
+      "name": "Delete Employee",
+      "request": {
+        "method": "DELETE",
+        "url": "{{baseUrl}}/api/employees/{{employeeId}}"
+      }
+    }
+  ]
+}

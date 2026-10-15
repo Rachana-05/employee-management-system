@@ -6,6 +6,14 @@ import "./App.css";
 const API = "http://localhost:8080/api/employees";
 const PAGE_SIZE = 5;
 
+const api = axios.create({
+  baseURL: API,
+  auth: {
+    username: "admin",
+    password: "ChooseYourOwnStrongPassword123!",
+  },
+});
+
 const EMPTY_FORM = {
   firstName: "",
   lastName: "",
@@ -20,7 +28,7 @@ const EMPTY_FORM = {
 
 function App() {
   const [employees, setEmployees] = useState([]);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState({ ...EMPTY_FORM });
   const [showForm, setShowForm] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -34,15 +42,20 @@ function App() {
 
   async function loadEmployees() {
     setLoading(true);
+
     try {
-      const response = await axios.get(API);
+      const response = await api.get("");
       setEmployees(response.data);
       setError("");
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Could not load employees. Check the backend and database."
-      );
+      if (err.response?.status === 401) {
+        setError("Authentication failed. Check the API credentials.");
+      } else {
+        setError(
+          err.response?.data?.message ||
+            "Could not load employees. Check the backend and database."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -73,6 +86,7 @@ function App() {
       joiningDate: employee.joiningDate ?? "",
       status: employee.status ?? "ACTIVE",
     });
+
     setEditingId(employee.id);
     setSelectedEmployee(null);
     setError("");
@@ -87,13 +101,17 @@ function App() {
     setSuccess("");
 
     try {
-      const payload = { ...form, salary: Number(form.salary) };
+      const payload = {
+        ...form,
+        salary: Number(form.salary),
+      };
 
       if (editingId !== null) {
-        await axios.put(`${API}/${editingId}`, payload);
+        // Use the configured Axios instance so authentication is included.
+        await api.put(`/${editingId}`, payload);
         setSuccess("Employee updated successfully.");
       } else {
-        await axios.post(API, payload);
+        await api.post("", payload);
         setSuccess("Employee created successfully.");
       }
 
@@ -102,12 +120,17 @@ function App() {
       setShowForm(false);
       setSelectedEmployee(null);
       setCurrentPage(0);
+
       await loadEmployees();
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Could not save employee. Check the form and try again."
-      );
+      if (err.response?.status === 401) {
+        setError("Authentication failed. Check the API credentials.");
+      } else {
+        setError(
+          err.response?.data?.message ||
+            "Could not save employee. Check the form and try again."
+        );
+      }
     }
   }
 
@@ -120,22 +143,34 @@ function App() {
     setSuccess("");
 
     try {
-      await axios.delete(`${API}/${id}`);
+      // Use the configured Axios instance so authentication is included.
+      await api.delete(`/${id}`);
       setSuccess("Employee deleted successfully.");
       setSelectedEmployee(null);
       await loadEmployees();
     } catch (err) {
-      setError(err.response?.data?.message || "Could not delete the employee.");
+      if (err.response?.status === 401) {
+        setError("Authentication failed. Check the API credentials.");
+      } else {
+        setError(
+          err.response?.data?.message ||
+            "Could not delete the employee."
+        );
+      }
     }
   }
 
   function updateField(event) {
     const { name, value } = event.target;
-    setForm((previous) => ({ ...previous, [name]: value }));
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
   }
 
   const filteredEmployees = employees.filter((employee) => {
     const term = search.trim().toLowerCase();
+
     const fullName =
       `${employee.firstName ?? ""} ${employee.lastName ?? ""}`.toLowerCase();
 
@@ -144,7 +179,8 @@ function App() {
         (employee.email ?? "").toLowerCase().includes(term)) &&
       (!department ||
         employee.department?.toLowerCase() === department.toLowerCase()) &&
-      (!status || employee.status?.toLowerCase() === status.toLowerCase())
+      (!status ||
+        employee.status?.toLowerCase() === status.toLowerCase())
     );
   });
 
@@ -156,6 +192,7 @@ function App() {
 
   const totalPages = Math.ceil(filteredEmployees.length / PAGE_SIZE);
   const safePage = Math.min(currentPage, Math.max(totalPages - 1, 0));
+
   const paginatedEmployees = filteredEmployees.slice(
     safePage * PAGE_SIZE,
     (safePage + 1) * PAGE_SIZE
@@ -171,6 +208,7 @@ function App() {
             Manage employee records, roles, and departments.
           </p>
         </div>
+
         <div className="header-actions">
           <button className="primary-button" onClick={openAddForm}>
             + Add Employee
@@ -193,6 +231,7 @@ function App() {
                 {selectedEmployee.firstName} {selectedEmployee.lastName}
               </h2>
             </div>
+
             <button
               className="secondary-button"
               onClick={() => setSelectedEmployee(null)}
@@ -202,14 +241,40 @@ function App() {
           </div>
 
           <div className="details-grid">
-            <div><span>Employee ID</span><strong>#{selectedEmployee.id}</strong></div>
-            <div><span>Email Address</span><strong>{selectedEmployee.email}</strong></div>
-            <div><span>Phone Number</span><strong>{selectedEmployee.phoneNumber}</strong></div>
-            <div><span>Department</span><strong>{selectedEmployee.department}</strong></div>
-            <div><span>Designation</span><strong>{selectedEmployee.designation}</strong></div>
-            <div><span>Salary</span><strong>{Number(selectedEmployee.salary).toLocaleString("en-IN")}</strong></div>
-            <div><span>Date of Joining</span><strong>{selectedEmployee.joiningDate}</strong></div>
-            <div><span>Employment Status</span><strong>{selectedEmployee.status}</strong></div>
+            <div>
+              <span>Employee ID</span>
+              <strong>#{selectedEmployee.id}</strong>
+            </div>
+            <div>
+              <span>Email Address</span>
+              <strong>{selectedEmployee.email}</strong>
+            </div>
+            <div>
+              <span>Phone Number</span>
+              <strong>{selectedEmployee.phoneNumber}</strong>
+            </div>
+            <div>
+              <span>Department</span>
+              <strong>{selectedEmployee.department}</strong>
+            </div>
+            <div>
+              <span>Designation</span>
+              <strong>{selectedEmployee.designation}</strong>
+            </div>
+            <div>
+              <span>Salary</span>
+              <strong>
+                {Number(selectedEmployee.salary).toLocaleString("en-IN")}
+              </strong>
+            </div>
+            <div>
+              <span>Date of Joining</span>
+              <strong>{selectedEmployee.joiningDate}</strong>
+            </div>
+            <div>
+              <span>Employment Status</span>
+              <strong>{selectedEmployee.status}</strong>
+            </div>
           </div>
 
           <button
@@ -223,32 +288,114 @@ function App() {
 
       {showForm && (
         <section className="panel employee-form-panel">
-          <h2>{editingId !== null ? "Edit Employee" : "Add New Employee"}</h2>
+          <h2>
+            {editingId !== null ? "Edit Employee" : "Add New Employee"}
+          </h2>
+
           <form onSubmit={handleSubmit} className="employee-form">
-            <input name="firstName" placeholder="First name" value={form.firstName} onChange={updateField} maxLength={50} required />
-            <input name="lastName" placeholder="Last name" value={form.lastName} onChange={updateField} maxLength={50} required />
-            <input name="email" type="email" placeholder="Email address" value={form.email} onChange={updateField} maxLength={150} required />
-            <input name="phoneNumber" type="tel" placeholder="Phone number" value={form.phoneNumber} onChange={updateField} pattern="[+0-9() -]{7,20}" required />
-            <input name="department" placeholder="Department" value={form.department} onChange={updateField} maxLength={100} required />
-            <input name="designation" placeholder="Designation" value={form.designation} onChange={updateField} maxLength={100} required />
-            <input name="salary" type="number" min="0" step="0.01" placeholder="Salary" value={form.salary} onChange={updateField} required />
-            <label>Date of joining
-              <input name="joiningDate" type="date" value={form.joiningDate} onChange={updateField} required />
+            <input
+              name="firstName"
+              placeholder="First name"
+              value={form.firstName}
+              onChange={updateField}
+              maxLength={50}
+              required
+            />
+
+            <input
+              name="lastName"
+              placeholder="Last name"
+              value={form.lastName}
+              onChange={updateField}
+              maxLength={50}
+              required
+            />
+
+            <input
+              name="email"
+              type="email"
+              placeholder="Email address"
+              value={form.email}
+              onChange={updateField}
+              maxLength={150}
+              required
+            />
+
+            <input
+              name="phoneNumber"
+              type="tel"
+              placeholder="Phone number"
+              value={form.phoneNumber}
+              onChange={updateField}
+              pattern="[+0-9() -]{7,20}"
+              required
+            />
+
+            <input
+              name="department"
+              placeholder="Department"
+              value={form.department}
+              onChange={updateField}
+              maxLength={100}
+              required
+            />
+
+            <input
+              name="designation"
+              placeholder="Designation"
+              value={form.designation}
+              onChange={updateField}
+              maxLength={100}
+              required
+            />
+
+            <input
+              name="salary"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Salary"
+              value={form.salary}
+              onChange={updateField}
+              required
+            />
+
+            <label>
+              Date of joining
+              <input
+                name="joiningDate"
+                type="date"
+                value={form.joiningDate}
+                onChange={updateField}
+                required
+              />
             </label>
-            <select name="status" value={form.status} onChange={updateField} required>
+
+            <select
+              name="status"
+              value={form.status}
+              onChange={updateField}
+              required
+            >
               <option value="ACTIVE">ACTIVE</option>
               <option value="INACTIVE">INACTIVE</option>
             </select>
+
             <div className="header-actions">
               <button className="primary-button" type="submit">
                 {editingId !== null ? "Update Employee" : "Save Employee"}
               </button>
-              <button className="secondary-button" type="button" onClick={() => {
-                setShowForm(false);
-                setEditingId(null);
-                setForm({ ...EMPTY_FORM });
-                setError("");
-              }}>
+
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingId(null);
+                  setForm({ ...EMPTY_FORM });
+                  setError("");
+                }}
+              >
                 Cancel
               </button>
             </div>
@@ -263,63 +410,123 @@ function App() {
 
       <section className="panel">
         <div className="toolbar">
-          <input type="search" placeholder="Search by name or email..." value={search} onChange={(event) => {
-            setSearch(event.target.value);
-            setCurrentPage(0);
-          }} />
-          <select value={department} onChange={(event) => {
-            setDepartment(event.target.value);
-            setCurrentPage(0);
-          }}>
+          <input
+            type="search"
+            placeholder="Search by name or email..."
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setCurrentPage(0);
+            }}
+          />
+
+          <select
+            value={department}
+            onChange={(event) => {
+              setDepartment(event.target.value);
+              setCurrentPage(0);
+            }}
+          >
             <option value="">All departments</option>
-            {departments.map((item) => <option key={item} value={item}>{item}</option>)}
+            {departments.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
           </select>
-          <select value={status} onChange={(event) => {
-            setStatus(event.target.value);
-            setCurrentPage(0);
-          }}>
+
+          <select
+            value={status}
+            onChange={(event) => {
+              setStatus(event.target.value);
+              setCurrentPage(0);
+            }}
+          >
             <option value="">All statuses</option>
             <option value="ACTIVE">ACTIVE</option>
             <option value="INACTIVE">INACTIVE</option>
           </select>
         </div>
 
-        {loading ? <p className="message">Loading employees...</p> : (
+        {loading ? (
+          <p className="message">Loading employees...</p>
+        ) : (
           <div className="table-wrapper">
             <table>
               <thead>
                 <tr>
-                  <th>ID</th><th>Employee</th><th>Email</th><th>Phone</th>
-                  <th>Department</th><th>Designation</th><th>Salary</th>
-                  <th>Status</th><th>Actions</th>
+                  <th>ID</th>
+                  <th>Employee</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Department</th>
+                  <th>Designation</th>
+                  <th>Salary</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
+
               <tbody>
                 {paginatedEmployees.map((employee) => (
                   <tr key={employee.id}>
                     <td>#{employee.id}</td>
-                    <td><strong>{employee.firstName} {employee.lastName}</strong></td>
+                    <td>
+                      <strong>
+                        {employee.firstName} {employee.lastName}
+                      </strong>
+                    </td>
                     <td>{employee.email}</td>
                     <td>{employee.phoneNumber}</td>
                     <td>{employee.department}</td>
                     <td>{employee.designation}</td>
-                    <td>{Number(employee.salary).toLocaleString("en-IN")}</td>
-                    <td><span className={`status ${(employee.status ?? "").toLowerCase()}`}>{employee.status}</span></td>
+                    <td>
+                      {Number(employee.salary).toLocaleString("en-IN")}
+                    </td>
+                    <td>
+                      <span
+                        className={`status ${(employee.status ?? "").toLowerCase()}`}
+                      >
+                        {employee.status}
+                      </span>
+                    </td>
                     <td>
                       <div className="header-actions">
-                        <button className="secondary-button" onClick={() => {
-                          setSelectedEmployee(employee);
-                          setShowForm(false);
-                          setEditingId(null);
-                        }}>Details</button>
-                        <button className="secondary-button" onClick={() => handleEdit(employee)}>Edit</button>
-                        <button className="delete-button" onClick={() => deleteEmployee(employee.id)}>Delete</button>
+                        <button
+                          className="secondary-button"
+                          onClick={() => {
+                            setSelectedEmployee(employee);
+                            setShowForm(false);
+                            setEditingId(null);
+                          }}
+                        >
+                          Details
+                        </button>
+
+                        <button
+                          className="secondary-button"
+                          onClick={() => handleEdit(employee)}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          className="delete-button"
+                          onClick={() => deleteEmployee(employee.id)}
+                        >
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>
                 ))}
+
                 {paginatedEmployees.length === 0 && (
-                  <tr><td colSpan="9" className="message">No employees found.</td></tr>
+                  <tr>
+                    <td colSpan="9" className="message">
+                      No employees found.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -328,14 +535,39 @@ function App() {
 
         <footer className="table-footer pagination">
           <span>
-            Showing {filteredEmployees.length === 0 ? 0 : safePage * PAGE_SIZE + 1}
-            {" – "}{Math.min((safePage + 1) * PAGE_SIZE, filteredEmployees.length)}
-            {" of "}{filteredEmployees.length} employee(s)
+            Showing{" "}
+            {filteredEmployees.length === 0 ? 0 : safePage * PAGE_SIZE + 1}
+            {" – "}
+            {Math.min(
+              (safePage + 1) * PAGE_SIZE,
+              filteredEmployees.length
+            )}
+            {" of "}
+            {filteredEmployees.length} employee(s)
           </span>
+
           <div className="header-actions">
-            <button className="secondary-button" disabled={safePage === 0} onClick={() => setCurrentPage((page) => Math.max(0, page - 1))}>Previous</button>
-            <span>Page {totalPages === 0 ? 0 : safePage + 1} of {totalPages}</span>
-            <button className="secondary-button" disabled={totalPages === 0 || safePage >= totalPages - 1} onClick={() => setCurrentPage((page) => page + 1)}>Next</button>
+            <button
+              className="secondary-button"
+              disabled={safePage === 0}
+              onClick={() =>
+                setCurrentPage((page) => Math.max(0, page - 1))
+              }
+            >
+              Previous
+            </button>
+
+            <span>
+              Page {totalPages === 0 ? 0 : safePage + 1} of {totalPages}
+            </span>
+
+            <button
+              className="secondary-button"
+              disabled={totalPages === 0 || safePage >= totalPages - 1}
+              onClick={() => setCurrentPage((page) => page + 1)}
+            >
+              Next
+            </button>
           </div>
         </footer>
       </section>
